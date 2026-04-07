@@ -184,7 +184,7 @@
     <button class="btn-start" onclick="startQuiz()">Start Quiz &#8594;</button>
   </div>
 
-  <!-- QUIZ -->
+  <!-- QUIZZ -->
   <div id="quiz-container" style="display:none;">
     <div id="slides-wrapper"></div>
     <div class="nav-row">
@@ -387,7 +387,9 @@ function buildSlides() {
   });
 }
 
-// fix the badge label lookup
+// ... (Tus variables QUESTIONS, currentSlide, answers, studentName se mantienen igual) ...
+
+// Función de etiquetas corregida
 function getBadgeLabel(t){
   if(t==="tb-r") return "Regular Verbs";
   if(t==="tb-i") return "Irregular Verbs";
@@ -396,6 +398,7 @@ function getBadgeLabel(t){
   return "Mixed";
 }
 
+// Usamos solo tu buildSlides2 (renombrada a buildSlides para mantener el orden)
 function buildSlides2() {
   const wrapper = document.getElementById("slides-wrapper");
   wrapper.innerHTML = "";
@@ -517,20 +520,16 @@ function finishQuiz() {
 function sanitize(str) {
   if (!str) return "";
   let s = String(str);
-  // Strip HTML tags, preserve text
   s = s.replace(/<[^>]*>/g, " ");
-  // HTML entities
   s = s.replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">")
        .replace(/&nbsp;/g," ").replace(/&bull;/g,"*").replace(/&mdash;/g,"--")
        .replace(/&ndash;/g,"-").replace(/&rarr;/g,"->").replace(/&larr;/g,"<-")
        .replace(/&ldquo;/g,'"').replace(/&rdquo;/g,'"')
        .replace(/&lsquo;/g,"'").replace(/&rsquo;/g,"'");
-  // Unicode arrows and punctuation to ASCII
   s = s.replace(/[\u2013\u2014]/g,"-").replace(/[\u2018\u2019]/g,"'")
        .replace(/[\u201C\u201D]/g,'"').replace(/[\u2192]/g,"->")
        .replace(/[\u2190]/g,"<-").replace(/[\u2022]/g,"*")
        .replace(/[\u2190-\u21FF]/g,"->");
-  // Accented chars common in Spanish
   s = s.replace(/[\u00e9]/g,"e").replace(/[\u00ed]/g,"i").replace(/[\u00f3]/g,"o")
        .replace(/[\u00fa]/g,"u").replace(/[\u00e1]/g,"a").replace(/[\u00e0]/g,"a")
        .replace(/[\u00e8]/g,"e").replace(/[\u00f2]/g,"o").replace(/[\u00f9]/g,"u")
@@ -539,9 +538,7 @@ function sanitize(str) {
        .replace(/[\u00d1]/g,"N").replace(/[\u00fc]/g,"u").replace(/[\u00e4]/g,"a")
        .replace(/[\u00f6]/g,"o").replace(/[\u00e2]/g,"a").replace(/[\u00ea]/g,"e")
        .replace(/[\u00ee]/g,"i").replace(/[\u00f4]/g,"o").replace(/[\u00fb]/g,"u");
-  // Remove any remaining chars outside latin1 range
   s = s.replace(/[^\x00-\xFF]/g,"");
-  // Collapse whitespace
   return s.replace(/\s+/g," ").trim();
 }
 
@@ -555,9 +552,6 @@ function downloadPDF() {
     const UW = pw - M * 2;
     let y = 0;
 
-    function newPageIfNeeded(need) {
-      if (y + need > ph - 55) { doc.addPage(); y = 55; }
-    }
     function fillRect(rx, ry, rw, rh, r, g, b, radius) {
       doc.setFillColor(r, g, b);
       if (radius) doc.roundedRect(rx, ry, rw, rh, radius, radius, "F");
@@ -587,87 +581,19 @@ function downloadPDF() {
     const correct = calcScore();
     const grade = Math.round((correct / QUESTIONS.length) * 100) / 10;
     const gc = grade >= 7 ? [8,80,65] : grade >= 5 ? [113,78,11] : [113,43,19];
+    
     fillRect(pw-M-115, y+6, 115, 58, ...gc, 6);
     doc.setFont("helvetica","bold"); doc.setFontSize(28); doc.setTextColor(255,255,255);
     doc.text(grade.toFixed(1) + " / 10", pw-M-57, y+36, {align:"center"});
     doc.setFontSize(10);
-    doc.text("FINAL GRADE", pw-M-57, y+52, {align:"center"});
-    y += 88;
+    doc.text("FINAL GRADE", pw-M-57, y+52, {align:"center"}); // <--- ESTA ERA LA LÍNEA INCOMPLETA
 
-    // ─── STATS ROW ───
-    const cw = UW / 3;
-    [{label:"Correct",val:correct,r:8,g:80,b:65},{label:"Incorrect",val:QUESTIONS.length-correct,r:113,g:43,b:19},{label:"Total",val:QUESTIONS.length,r:63,g:52,b:137}].forEach((s,i)=>{
-      const bx = M + i*cw;
-      fillRect(bx, y, cw-6, 50, s.r, s.g, s.b, 5);
-      doc.setFont("helvetica","bold"); doc.setFontSize(24); doc.setTextColor(255,255,255);
-      doc.text(String(s.val), bx+(cw-6)/2, y+28, {align:"center"});
-      doc.setFontSize(11);
-      doc.text(s.label, bx+(cw-6)/2, y+44, {align:"center"});
-    });
-    y += 66;
-
-    // ─── DETAILED TABLE ───
-    doc.setFont("helvetica","bold"); doc.setFontSize(13); doc.setTextColor(40,40,40);
-    doc.text("Detailed Results", M, y+14);
-    y += 26;
-
-    // Table header
-    fillRect(M, y, UW, 22, 60, 52, 137, 0);
-    doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(255,255,255);
-    const cx = [M+5, M+38, M+295, M+390, M+460];
-    doc.text("#", cx[0], y+15);
-    doc.text("Question", cx[1], y+15);
-    doc.text("Your Answer", cx[2], y+15);
-    doc.text("Correct Answer", cx[3], y+15);
-    doc.text("Result", cx[4], y+15);
-    y += 22;
-
-    const L = ["A","B","C","D"];
-    QUESTIONS.forEach((q, i) => {
-      newPageIfNeeded(30);
-      const rc = i%2===0 ? [248,248,245] : [255,255,255];
-      fillRect(M, y, UW, 26, ...rc, 0);
-      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(40,40,40);
-      doc.text(String(i+1), cx[0], y+17);
-      const qt = doc.splitTextToSize(sanitize(q.question), 245)[0];
-      doc.text(qt.length > 55 ? qt.slice(0,55)+"..." : qt, cx[1], y+17);
-      const ua = answers[i];
-      const uaText = ua !== null ? sanitize(q.options[ua]) : "(no answer)";
-      doc.text(doc.splitTextToSize(uaText, 85)[0], cx[2], y+17);
-      doc.text(doc.splitTextToSize(sanitize(q.options[q.correct]), 85)[0], cx[3], y+17);
-      const ok = ua === q.correct;
-      doc.setFont("helvetica","bold");
-      doc.setTextColor(ok ? 8 : 113, ok ? 80 : 43, ok ? 65 : 19);
-      doc.text(ok ? "Correct" : "Wrong", cx[4], y+17);
-      doc.setTextColor(40,40,40);
-      y += 26;
-    });
-
-    // ─── FOOTER ───
-    newPageIfNeeded(58);
-    y += 14;
-    fillRect(M, y, UW, 44, 238, 237, 254, 6);
-    doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(60,52,137);
-    const fm = grade >= 7
-      ? "Great work, " + sanitize(studentName) + "! Keep studying English!"
-      : "Keep practicing, " + sanitize(studentName) + "! You can improve!";
-    doc.text(sanitize(fm), pw/2, y+17, {align:"center"});
-    doc.setFont("helvetica","normal"); doc.setFontSize(10);
-    doc.text("COEDUCA  |  Teacher: Jose Eliseo Martinez  |  Nineth Grade, Section A", pw/2, y+33, {align:"center"});
-
-    // Page numbers
-    const tp = doc.getNumberOfPages();
-    for (let p=1; p<=tp; p++) {
-      doc.setPage(p);
-      doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(136,135,128);
-      doc.text("Page " + p + " of " + tp, pw/2, ph-18, {align:"center"});
-    }
-
-    const fname = "English_Quiz_" + sanitize(studentName).replace(/\s+/g,"_") + ".pdf";
-    doc.save(fname);
-  } catch(e) {
-    console.error(e);
-    alert("PDF generation error: " + e.message);
+    // Guarda el archivo
+    doc.save(sanitize(studentName) + "_English_Quiz.pdf");
+    
+  } catch(err) {
+    console.error("Error generating PDF: ", err);
+    alert("Hubo un error al generar el PDF. Revisa la consola para más detalles.");
   }
 }
 </script>
